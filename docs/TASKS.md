@@ -42,3 +42,7 @@ Sprint 3 validation: core and mentor flows passed against production; browser co
 ## Account sign-in sprint
 
 User requested sign-in after the demo release. Implemented Supabase passwordless email sign-in and code verification, a PKCE callback, sign-out, transactional account ownership and first-sign-in adoption of an unclaimed visitor workspace. Verified isolation and restoration with real Supabase test accounts. Applied migration 202609120001 and configured the production callback URL. General email delivery remains dependent on custom SMTP; the user confirmed no provider is configured.
+
+## Smartphone layout update
+
+Added a native section picker for phone navigation, 44–48px touch controls, 16px form inputs, single-column mobile forms, wrapping card headings, and viewport-height-aware scrolling dialogs. Checked all eight sections at 320/375/390/430px with no horizontal overflow, reviewed sign-in at 320px and desktop at 1280px. Browser acceptance created a Health goal and saved all five goal ratings at 8; overview displayed the persisted 8.0 average after navigation and reload. Production build/typecheck passed. These are browser viewport checks, not physical-device keyboard tests.
