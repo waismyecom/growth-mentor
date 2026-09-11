@@ -38,3 +38,7 @@ On 2026-09-11 the only connected Vercel team was `waismahbub71-aiab`. Linking `g
 Sprint 2: migration 003 applied. Both production build and mentor integration test passed. Browser verified pushback, accepted revision and milestone submission. Live AI provider is not configured; the shipping coach uses explicitly labeled structured rules.
 
 Sprint 3 validation: core and mentor flows passed against production; browser completed vision, Health goal, scorecard, target challenge/revision, milestone chain, evidence audit and four-question corrective action. Mobile width 390px fits without document overflow. Fixed unconfigured domains being graded instead of unscored; regression covers missing domains versus zero evidence. Calendar validation now uses workspace timezone. Migrations 004/005 applied; final production build passes.
+
+## Account sign-in sprint
+
+User requested sign-in after the demo release. Implemented Supabase passwordless email sign-in and code verification, a PKCE callback, sign-out, transactional account ownership and first-sign-in adoption of an unclaimed visitor workspace. Verified isolation and restoration with real Supabase test accounts. Applied migration 202609120001 and configured the production callback URL. General email delivery remains dependent on custom SMTP; the user confirmed no provider is configured.

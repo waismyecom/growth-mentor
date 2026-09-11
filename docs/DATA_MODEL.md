@@ -6,7 +6,7 @@ Additional migrations implement transactional initialization, scorecard saving, 
 
 All business records belong to a workspace. Composite foreign keys prevent cross-workspace references. Anonymous/authenticated clients receive no table grants or policies; the server mediates access using its visitor workspace context. Migration runs in one transaction and must be recorded/applied once by Supabase migrations.
 
-- **workspaces**: visitor identity, timezone, created timestamp.
+- **workspaces**: visitor identity, timezone, created timestamp, nullable unique owner_id referencing auth.users. account_workspace serializes first adoption per account and never reassigns an existing owner.
 - **visions**: one editable ten-year anchor per workspace.
 - **goals**: title, pillar, long/short term, life domain, horizon, parent, baseline, target, unit, direction, deadline, status, reward and voluntary stake.
 - **weekly_scorecards**: workspace + ISO-week Monday unique; reflection.

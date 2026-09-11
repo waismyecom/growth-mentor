@@ -22,7 +22,7 @@ Commit and push to `main`; Vercel automatically deploys from Git. Do not deploy 
 
 ## Behavior and limits
 
-- No login wall: each browser gets a signed HttpOnly visitor cookie and editable sample goals. Clearing cookies loses access to that workspace; account login/recovery is not implemented.
+- No login wall: each browser gets a signed HttpOnly visitor cookie and editable sample goals. Signing in attaches an unclaimed demo workspace to the verified account; returning accounts restore their existing workspace across devices. Clearing cookies only loses access to unclaimed demo workspaces.
 - Every query is scoped by the server; direct anonymous table access is denied by RLS. Service-role credentials never enter client bundles.
 - Weekly goal ratings are subjective 1–10 assessments. Evidence audits separately calculate commitment adherence from logged quantities. Missing domains have no score; zero logged progress against a commitment scores zero.
 - Audits freeze evidence and commitment snapshots. An explicit refresh of the selected week recalculates it.
@@ -31,3 +31,11 @@ Commit and push to `main`; Vercel automatically deploys from Git. Do not deploy 
 - Stakes are voluntary reminders, never automatic transactions. No notifications, payments or human coaching are part of this release.
 
 See `docs/PRD.md`, `docs/MENTOR_SPEC.md`, and `docs/TASKS.md` for requirements and delivery evidence.
+
+## Sign-in
+
+`/sign-in` sends a Supabase email link. `/auth/callback` exchanges its PKCE code and restores the account workspace. Numeric email codes are also supported if supplied by the email template. Sign-out clears the local session and opens a separate demo. A previously signed guest cookie cannot access a claimed workspace, even after sign-out.
+
+Supabase is currently using its default test email provider. It restricts delivery to project-team addresses; general student sign-in requires custom SMTP in Supabase Authentication settings. No email verification or security settings were disabled. Default email templates remain in use because template customization is unavailable with the free default sender. `supabase/templates/sign-in.html` is an optional numeric-code template for a future custom sender, not the active template.
+
+Run `node --env-file=.env.local scripts/check-auth.mjs` with the local server at port 3100 (or set TEST_URL). This generates isolated test-account verification codes via the admin API without sending email, then tests real verification, demo adoption, sign-out, cross-device restoration, stale guest-cookie denial, account isolation, invalid codes and request-origin checks. Email delivery to an inbox is a separate configuration-dependent check.

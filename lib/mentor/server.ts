@@ -1,4 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
+import {createClient as authClient} from '@/lib/supabase/server';
 import {cookies} from 'next/headers';
 import {createHmac,randomUUID,timingSafeEqual} from 'node:crypto';
 export function database() {
@@ -12,8 +13,22 @@ export async function workspace(timezone='UTC') {
   if(!secret) throw Error('Session configuration is missing.');
   const sign=(id:string)=>createHmac('sha256',secret).update(id).digest('hex');
   const jar=await cookies(); const raw=jar.get('mentor_workspace')?.value;
+  let guest:string|null=null;
   if(raw) {const [id,sig]=raw.split('.');const expected=sign(id);
-    if(/^[\da-f-]{36}$/.test(id)&&sig?.length===expected.length&&timingSafeEqual(Buffer.from(sig),Buffer.from(expected))) return id;
+    if(/^[\da-f-]{36}$/.test(id)&&sig?.length===expected.length&&timingSafeEqual(Buffer.from(sig),Buffer.from(expected))) guest=id;
+  }
+  const auth=await authClient();const {data:{user},error:authError}=await auth.auth.getUser();
+  if(authError&&authError.status&&authError.status>=500)throw Error('Sign-in is temporarily unavailable. Please retry.');
+  if(user){
+    const {data:id,error}=await database().rpc('account_workspace',{p_user:user.id,p_guest:guest,p_timezone:timezone});
+    if(error||!id)throw Error('Could not open your account workspace. Please retry.');
+    jar.delete('mentor_workspace');
+    return id as string;
+  }
+  if(guest){
+    const {data:row,error}=await database().from('workspaces').select('owner_id').eq('id',guest).maybeSingle();
+    if(error)throw Error('Could not verify workspace access. Please retry.');
+    if(row&&row.owner_id===null)return guest;
   }
   const id=randomUUID(); const {error}=await database().rpc('initialize_workspace',{p_id:id,p_timezone:timezone.slice(0,100)});
   if(error) throw Error('Could not create your workspace. Please retry.');
