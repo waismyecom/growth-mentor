@@ -4,16 +4,16 @@
 - [x] Clone into the Mac mini's Documents/My app folder; set Git identity.
 - [x] Read every existing docs file and added feature brief; confirm the plan.
 - [x] Write missing architecture/data model/task documents and schema migration.
-- [ ] Authenticate GitHub push and link the correct provisioned Vercel project.
-- [ ] Pull Supabase environment, inspect existing schema, apply migration, verify permissions.
+- [x] Authenticate GitHub push and link the correct provisioned Vercel project.
+- [x] Pull Supabase environment, inspect existing schema, apply migration, verify permissions.
 
 ## Sprint 1 — complete PRD job
-- [ ] Implement scoped visitor workspace and editable transactional seed.
-- [ ] Vision editing; goal create/edit/archive/delete, all four pillars.
-- [ ] Complete weekly rating form, atomic save, reflection and history.
-- [ ] Average, prior-week trend and pillar breakdown derived from persisted entries.
-- [ ] Verify exact PRD success scenario in a real browser, including refresh and a second isolated visitor.
-- [ ] Typecheck/build; commit and push; verify resulting Git deployment.
+- [x] Implement scoped visitor workspace and editable transactional seed.
+- [x] Vision editing; goal create/edit/archive/delete, all four pillars.
+- [x] Complete weekly rating form, atomic save, reflection and history.
+- [x] Average, prior-week trend and pillar breakdown derived from persisted entries.
+- [x] Verify exact PRD success scenario in a real browser, including refresh and a second isolated visitor.
+- [x] Typecheck/build; commit and push; verify resulting Git deployment.
 
 ## Sprint 2 — mentor and execution
 - [ ] Persist structured mentor interview, metric/deadline pushback and hierarchical milestones.
@@ -32,3 +32,5 @@
 ## Current provisioning evidence
 
 On 2026-09-11 the only connected Vercel team was `waismahbub71-aiab`. Linking `growth-mentor` created an empty project; GitHub linking failed for lack of repository access. Development env pull returned only Vercel OIDC; production env listing was empty. `git push --dry-run origin main` failed because GitHub credentials were unavailable. No Supabase migrations existed in the original repository. No migration has been applied, and no working deployment is claimed.
+
+2026-09-11 update: local Vercel login corrected to waismyecom, Supabase project ogtqixrndribfnjubkfm linked, migrations 001 and 002 applied. Server key and session secret configured in all Vercel environments. Sprint 1 browser acceptance and core API isolation/atomicity checks passed; production build passed.
