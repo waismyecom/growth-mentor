@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {database,workspace} from '@/lib/mentor/server';
+import {diagnosticQuestions,mentorFeedback} from '@/lib/mentor/coaching';
 import {pillars,domains,horizons} from '@/lib/mentor/types';
 export const dynamic='force-dynamic';
 const fail=(message:string,status=400)=>NextResponse.json({error:message},{status});
@@ -17,10 +18,11 @@ export async function GET(req:NextRequest) {
       db.from('commitments').select('*').eq('workspace_id',w).order('created_at'),
       db.from('activity_logs').select('*').eq('workspace_id',w).order('log_date',{ascending:false}),
       db.from('weekly_audits').select('*,audit_entries(*)').eq('workspace_id',w).order('week_start',{ascending:false}),
-      db.from('diagnostics').select('*').eq('workspace_id',w).order('created_at',{ascending:false})
+      db.from('diagnostics').select('*').eq('workspace_id',w).order('created_at',{ascending:false}),
+      db.from('mentor_interviews').select('*').eq('workspace_id',w).order('created_at',{ascending:false})
     ]);
     if(results.some(r=>r.error)) throw Error('Could not load your workspace. Please retry.');
-    return NextResponse.json(Object.fromEntries(['vision','goals','cards','commitments','logs','audits','diagnostics'].map((k,i)=>[k,results[i].data])),{headers:{'Cache-Control':'private, no-store'}});
+    return NextResponse.json(Object.fromEntries(['vision','goals','cards','commitments','logs','audits','diagnostics','interviews'].map((k,i)=>[k,results[i].data])),{headers:{'Cache-Control':'private, no-store'}});
   } catch(e){return fail(e instanceof Error?e.message:'Could not load workspace.',503);}
 }
 export async function POST(req:NextRequest) {
@@ -47,6 +49,41 @@ export async function POST(req:NextRequest) {
       const entries=b.entries;if(!Array.isArray(entries)||entries.length>200)throw Error('Invalid scorecard.');
       for(const e of entries){id(e.goal_id);if(!Number.isInteger(e.score)||e.score<1||e.score>10)throw Error('Rate every goal from 1 to 10.');text(e.note||'',2000,false);}
       ({error}=await db.rpc('save_scorecard',{p_workspace:w,p_week:date(b.week),p_reflection:text(b.reflection||'',5000,false),p_entries:entries}));
+    } else if(b.action==='commitment') {
+      const fields={title:text(b.title),domain:choice(b.domain,domains),weekly_target:num(b.weekly_target,0.000001),daily_target:num(b.daily_target,0.000001),unit:text(b.unit,80),goal_id:b.goal_id?id(b.goal_id):null,archived:Boolean(b.archived)};
+      if(fields.goal_id){const {data:g}=await db.from('goals').select('id').eq('workspace_id',w).eq('id',fields.goal_id).single();if(!g)throw Error('Choose a goal from your workspace.');}
+      if(b.id)({error}=await db.from('commitments').update(fields).eq('workspace_id',w).eq('id',id(b.id)).select('id').single());
+      else ({error}=await db.from('commitments').insert({...fields,workspace_id:w}));
+    } else if(b.action==='log') {
+      const logDate=date(b.log_date);if(logDate>new Date(Date.now()+86400000).toISOString().slice(0,10))throw Error('Evidence cannot be in the future.');
+      const {data:c}=await db.from('commitments').select('id').eq('workspace_id',w).eq('id',id(b.commitment_id)).eq('archived',false).single();if(!c)throw Error('Choose an active commitment.');
+      ({error}=await db.from('activity_logs').upsert({workspace_id:w,commitment_id:c.id,log_date:logDate,quantity:num(b.quantity),note:text(b.note||'',2000,false),updated_at:new Date().toISOString()},{onConflict:'commitment_id,log_date'}));
+    } else if(b.action==='audit') {
+      ({error}=await db.rpc('save_evidence_audit',{p_workspace:w,p_week:date(b.week)}));
+    } else if(b.action==='interview') {
+      const proposal={title:text(b.title),pillar:choice(b.pillar,pillars),domain:choice(b.domain,domains),baseline:num(b.baseline),target:num(b.target,0.000001),unit:text(b.unit,80),direction:choice(b.direction,['increase','decrease']),deadline:date(b.deadline),reason:text(b.reason||'',5000,false)};
+      if(proposal.deadline<=new Date().toISOString().slice(0,10))throw Error('Set a future vision deadline.');
+      const result=mentorFeedback(proposal);
+      ({error}=await db.from('mentor_interviews').insert({workspace_id:w,proposal,...result}));
+    } else if(b.action==='convert-plan') {
+      const {data:interview}=await db.from('mentor_interviews').select('*').eq('workspace_id',w).eq('id',id(b.id)).single();
+      if(!interview||interview.status!=='ready')throw Error('Finish the mentor challenge first.');
+      const p=interview.proposal;
+      const milestones=[{horizon:'10-year',target:p.target,deadline:p.deadline,reward:'',stake:''},...['3-year','annual','quarterly'].map(h=>({horizon:h,target:num(b[h+'_target'],0.000001),deadline:date(b[h+'_deadline']),reward:text(b[h+'_reward']||'',1000,false),stake:text(b[h+'_stake']||'',1000,false)}))];
+      for(let i=1;i<milestones.length;i++){const m=milestones[i],parent=milestones[i-1];if(m.deadline>=parent.deadline||m.deadline<=new Date().toISOString().slice(0,10))throw Error('Each nearer milestone needs an earlier future deadline.');if(p.direction==='increase'?(m.target>=parent.target||m.target<=p.baseline):(m.target<=parent.target||m.target>=p.baseline))throw Error('Each milestone must progress from the baseline toward its parent target.');}
+      ({error}=await db.rpc('convert_mentor_plan',{p_workspace:w,p_interview:interview.id,p_milestones:milestones}));
+    } else if(b.action==='diagnostic-start') {
+      ({error}=await db.from('diagnostics').insert({workspace_id:w,domain:choice(b.domain,domains)}));
+    } else if(b.action==='diagnostic-answer') {
+      const {data:d}=await db.from('diagnostics').select('*').eq('workspace_id',w).eq('id',id(b.id)).single();if(!d||d.completed||d.turns.length>=4)throw Error('This interview is no longer accepting answers.');
+      if(b.step!==d.turns.length)throw Error('This interview changed. Reload before answering.');
+      const answer=text(b.answer,3000);if(answer.length<20)throw Error('Be specific: describe the behavior and evidence in at least 20 characters.');
+      ({error}=await db.from('diagnostics').update({turns:[...d.turns,{question:diagnosticQuestions[d.turns.length],answer}],updated_at:new Date().toISOString()}).eq('workspace_id',w).eq('id',d.id).eq('updated_at',d.updated_at).select('id').single());
+    } else if(b.action==='diagnostic-finish') {
+      const {data:d}=await db.from('diagnostics').select('*').eq('workspace_id',w).eq('id',id(b.id)).single();if(!d||d.turns.length!==4||d.completed)throw Error('Complete all four diagnostic questions first.');
+      const action=text(b.corrective_action,1000),target=num(b.target,0.000001),unit=text(b.unit,80),deadline=date(b.deadline);
+      if(deadline<new Date().toISOString().slice(0,10))throw Error('Choose today or a future deadline.');
+      ({error}=await db.from('diagnostics').update({hypothesis:text(b.hypothesis,1000),corrective_action:`${action} — ${target} ${unit} by ${deadline}`,deadline,completed:true,updated_at:new Date().toISOString()}).eq('workspace_id',w).eq('id',d.id));
     } else return fail('Unknown action.');
     if(error){console.error('Workspace mutation failed:',error.code);return fail('Could not save. Check your entries and reload if your goals changed.');}
     return NextResponse.json({ok:true});

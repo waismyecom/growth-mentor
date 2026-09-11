@@ -1,41 +1,33 @@
-# vibe-stack-supabase
+# Growth Mentor
 
-Next.js 15 + Supabase starter for shipping vibe-coded apps fast. Clone, provision, build.
+Working personal growth app: vision → measurable goals → weekly scorecards, plus a structured mentor, milestone hierarchy, daily evidence, seven-domain audits and one-action diagnostics.
 
-## Stack
+## Run locally
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js 15 (App Router, React 19, Server Actions) |
-| Language | TypeScript strict |
-| Styles | Tailwind CSS v4 (CSS-first, no config file) |
-| Auth + DB | Supabase (`@supabase/ssr`) |
-| Package manager | Bun |
-| Deploy | Vercel |
+Use Node 22+ and pnpm 10.17.1. Run `pnpm install`, `vercel link` to the **waismyecom/growth-mentor** project, then `vercel env pull .env.local` and `pnpm dev`.
 
-## Quick start
+Required environment variables:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY (server only)
+- SESSION_SECRET (server only, random secret)
 
-```bash
-bun install
-cp .env.example .env.local   # fill in your Supabase keys
-bun dev
-```
+Supabase project: `ogtqixrndribfnjubkfm`. Apply migrations with `supabase link --project-ref ogtqixrndribfnjubkfm` then `supabase db push`. Never run a database reset against production.
 
-Open http://localhost:3000. Edit `app/page.tsx` to start building.
+## Validate and deploy
 
-## Provisioning a new project
+`pnpm typecheck` and `pnpm build`. With a running local server, run `TEST_URL=http://localhost:3000 pnpm test:core` and `TEST_URL=http://localhost:3000 pnpm test:mentor`. These checks create separate, test-only visitor workspaces in the configured database and retain those records for inspection.
 
-Use the `/new-vibe-project <name>` skill (see `claude-dotfiles` repo) which:
-1. Clones this template and renames it
-2. Creates a new GitHub repo and pushes
-3. Creates a Supabase project and injects URL + anon key
-4. Creates a Vercel project linked to the GitHub repo
-5. Triggers first deploy and returns the preview URL
+Commit and push to `main`; Vercel automatically deploys from Git. Do not deploy local files with Vercel CLI. Production: https://growth-mentor-blush.vercel.app
 
-## Working with AI
+## Behavior and limits
 
-See [CLAUDE.md](CLAUDE.md) for conventions. This repo is pre-wired for gstack — start with `/office-hours`.
+- No login wall: each browser gets a signed HttpOnly visitor cookie and editable sample goals. Clearing cookies loses access to that workspace; account login/recovery is not implemented.
+- Every query is scoped by the server; direct anonymous table access is denied by RLS. Service-role credentials never enter client bundles.
+- Weekly goal ratings are subjective 1–10 assessments. Evidence audits separately calculate commitment adherence from logged quantities. Missing domains have no score; zero logged progress against a commitment scores zero.
+- Audits freeze evidence and commitment snapshots. An explicit refresh of the selected week recalculates it.
+- The mentor is a deterministic, structured workflow, not an external AI model. It requires numeric targets and deadlines, records pushback/reasoning, and creates linked milestones transactionally. Health targets do not use blanket 10× prescriptions.
+- Double-click uses four guided questions, a user-confirmed working hypothesis and one measurable action. It does not diagnose people or claim to discover hidden facts.
+- Stakes are voluntary reminders, never automatic transactions. No notifications, payments or human coaching are part of this release.
 
-## Switching to Neon
-
-If you need Postgres without Supabase (e.g. prefer Drizzle ORM + Clerk for auth), a `vibe-stack-neon` variant is planned. For now: fork this and swap `@supabase/ssr` for `drizzle-orm` + `@neondatabase/serverless`, add Clerk or NextAuth.
+See `docs/PRD.md`, `docs/MENTOR_SPEC.md`, and `docs/TASKS.md` for requirements and delivery evidence.
