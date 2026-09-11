@@ -23,3 +23,5 @@ for(let step=0;step<4;step++)await write({action:'diagnostic-answer',id:diagnost
 await write({action:'diagnostic-finish',id:diagnostic,hypothesis:'Phone checking displaces scheduled movement',corrective_action:'Put my phone away before walking',target:1,unit:'phone-free walk daily',deadline:'2026-12-31'});
 d=await read();assert.equal(d.diagnostics[0].completed,true);assert.match(d.diagnostics[0].corrective_action,/1 phone-free walk daily/);
 console.log('PASS: target pushback, revision, atomic milestone chain, 7-domain logs and grading, frozen audit snapshots, explicit refresh, four-turn diagnosis and one measurable corrective action.');
+
+cookie='';await read();await write({action:'commitment',title:'Single domain test',domain:'Health',weekly_target:7,daily_target:1,unit:'walks',goal_id:'',archived:false});await write({action:'audit',week});const partial=await read();assert.equal(partial.audits[0].audit_entries.filter(e=>e.score===null).length,6);assert.equal(partial.audits[0].audit_entries.find(e=>e.domain==='Health').score,0);console.log('PASS: no-evidence commitment scores zero; six unconfigured domains stay unscored.');

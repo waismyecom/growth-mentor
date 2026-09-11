@@ -7,6 +7,7 @@ export function database() {
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
 export async function workspace(timezone='UTC') {
+  try {new Intl.DateTimeFormat('en',{timeZone:timezone}).format();}catch{timezone='UTC';}
   const secret=process.env.SESSION_SECRET;
   if(!secret) throw Error('Session configuration is missing.');
   const sign=(id:string)=>createHmac('sha256',secret).update(id).digest('hex');

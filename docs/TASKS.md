@@ -24,10 +24,10 @@
 - [x] Typecheck/build; commit and push; verify deployment.
 
 ## Sprint 3 — acceptance
-- [ ] Run complete vision → goal → evidence → audit → diagnostic → corrective action flow against real Supabase.
-- [ ] Check mobile layout, keyboard access, validation, empty states, server errors and cross-workspace denial.
-- [ ] Re-run PRD manual scorecard scenario, proving its independent averages and history.
-- [ ] Commit/push fixes and verify production persistence. Document remaining account-security limitations accurately.
+- [x] Run complete vision → goal → evidence → audit → diagnostic → corrective action flow against real Supabase.
+- [x] Check mobile layout, keyboard access, validation, empty states, server errors and cross-workspace denial.
+- [x] Re-run PRD manual scorecard scenario, proving its independent averages and history.
+- [x] Commit/push fixes and verify production persistence. Document remaining account-security limitations accurately.
 
 ## Current provisioning evidence
 
@@ -36,3 +36,5 @@ On 2026-09-11 the only connected Vercel team was `waismahbub71-aiab`. Linking `g
 2026-09-11 update: local Vercel login corrected to waismyecom, Supabase project ogtqixrndribfnjubkfm linked, migrations 001 and 002 applied. Server key and session secret configured in all Vercel environments. Sprint 1 browser acceptance and core API isolation/atomicity checks passed; production build passed.
 
 Sprint 2: migration 003 applied. Both production build and mentor integration test passed. Browser verified pushback, accepted revision and milestone submission. Live AI provider is not configured; the shipping coach uses explicitly labeled structured rules.
+
+Sprint 3 validation: core and mentor flows passed against production; browser completed vision, Health goal, scorecard, target challenge/revision, milestone chain, evidence audit and four-question corrective action. Mobile width 390px fits without document overflow. Fixed unconfigured domains being graded instead of unscored; regression covers missing domains versus zero evidence. Calendar validation now uses workspace timezone. Migrations 004/005 applied; final production build passes.

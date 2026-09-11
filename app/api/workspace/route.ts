@@ -31,6 +31,8 @@ export async function POST(req:NextRequest) {
   try {
     const raw=await req.text();if(raw.length>100000)return fail('Submission too large.');
     const b=JSON.parse(raw),w=await workspace(),db=database();let error;
+    const {data:scope}=await db.from('workspaces').select('timezone').eq('id',w).single();
+    const today=new Intl.DateTimeFormat('en-CA',{timeZone:scope?.timezone||'UTC',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
     if(b.action==='vision') {
       ({error}=await db.from('visions').update({statement:text(b.statement,10000),target_date:date(b.target_date),updated_at:new Date().toISOString()}).eq('workspace_id',w));
     } else if(b.action==='goal') {
@@ -55,14 +57,14 @@ export async function POST(req:NextRequest) {
       if(b.id)({error}=await db.from('commitments').update(fields).eq('workspace_id',w).eq('id',id(b.id)).select('id').single());
       else ({error}=await db.from('commitments').insert({...fields,workspace_id:w}));
     } else if(b.action==='log') {
-      const logDate=date(b.log_date);if(logDate>new Date(Date.now()+86400000).toISOString().slice(0,10))throw Error('Evidence cannot be in the future.');
+      const logDate=date(b.log_date);if(logDate>today)throw Error('Evidence cannot be in the future.');
       const {data:c}=await db.from('commitments').select('id').eq('workspace_id',w).eq('id',id(b.commitment_id)).eq('archived',false).single();if(!c)throw Error('Choose an active commitment.');
       ({error}=await db.from('activity_logs').upsert({workspace_id:w,commitment_id:c.id,log_date:logDate,quantity:num(b.quantity),note:text(b.note||'',2000,false),updated_at:new Date().toISOString()},{onConflict:'commitment_id,log_date'}));
     } else if(b.action==='audit') {
       ({error}=await db.rpc('save_evidence_audit',{p_workspace:w,p_week:date(b.week)}));
     } else if(b.action==='interview') {
       const proposal={title:text(b.title),pillar:choice(b.pillar,pillars),domain:choice(b.domain,domains),baseline:num(b.baseline),target:num(b.target,0.000001),unit:text(b.unit,80),direction:choice(b.direction,['increase','decrease']),deadline:date(b.deadline),reason:text(b.reason||'',5000,false)};
-      if(proposal.deadline<=new Date().toISOString().slice(0,10))throw Error('Set a future vision deadline.');
+      if(proposal.deadline<=today)throw Error('Set a future vision deadline.');
       const result=mentorFeedback(proposal);
       ({error}=await db.from('mentor_interviews').insert({workspace_id:w,proposal,...result}));
     } else if(b.action==='convert-plan') {
@@ -70,7 +72,7 @@ export async function POST(req:NextRequest) {
       if(!interview||interview.status!=='ready')throw Error('Finish the mentor challenge first.');
       const p=interview.proposal;
       const milestones=[{horizon:'10-year',target:p.target,deadline:p.deadline,reward:'',stake:''},...['3-year','annual','quarterly'].map(h=>({horizon:h,target:num(b[h+'_target'],0.000001),deadline:date(b[h+'_deadline']),reward:text(b[h+'_reward']||'',1000,false),stake:text(b[h+'_stake']||'',1000,false)}))];
-      for(let i=1;i<milestones.length;i++){const m=milestones[i],parent=milestones[i-1];if(m.deadline>=parent.deadline||m.deadline<=new Date().toISOString().slice(0,10))throw Error('Each nearer milestone needs an earlier future deadline.');if(p.direction==='increase'?(m.target>=parent.target||m.target<=p.baseline):(m.target<=parent.target||m.target>=p.baseline))throw Error('Each milestone must progress from the baseline toward its parent target.');}
+      for(let i=1;i<milestones.length;i++){const m=milestones[i],parent=milestones[i-1];if(m.deadline>=parent.deadline||m.deadline<=today)throw Error('Each nearer milestone needs an earlier future deadline.');if(p.direction==='increase'?(m.target>=parent.target||m.target<=p.baseline):(m.target<=parent.target||m.target>=p.baseline))throw Error('Each milestone must progress from the baseline toward its parent target.');}
       ({error}=await db.rpc('convert_mentor_plan',{p_workspace:w,p_interview:interview.id,p_milestones:milestones}));
     } else if(b.action==='diagnostic-start') {
       ({error}=await db.from('diagnostics').insert({workspace_id:w,domain:choice(b.domain,domains)}));
@@ -82,7 +84,7 @@ export async function POST(req:NextRequest) {
     } else if(b.action==='diagnostic-finish') {
       const {data:d}=await db.from('diagnostics').select('*').eq('workspace_id',w).eq('id',id(b.id)).single();if(!d||d.turns.length!==4||d.completed)throw Error('Complete all four diagnostic questions first.');
       const action=text(b.corrective_action,1000),target=num(b.target,0.000001),unit=text(b.unit,80),deadline=date(b.deadline);
-      if(deadline<new Date().toISOString().slice(0,10))throw Error('Choose today or a future deadline.');
+      if(deadline<today)throw Error('Choose today or a future deadline.');
       ({error}=await db.from('diagnostics').update({hypothesis:text(b.hypothesis,1000),corrective_action:`${action} — ${target} ${unit} by ${deadline}`,deadline,completed:true,updated_at:new Date().toISOString()}).eq('workspace_id',w).eq('id',d.id));
     } else return fail('Unknown action.');
     if(error){console.error('Workspace mutation failed:',error.code);return fail('Could not save. Check your entries and reload if your goals changed.');}
